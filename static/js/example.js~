@@ -1,0 +1,151 @@
+(function($) {
+    function __autotable(jsel, options){
+        var that = this;
+        that.disabled = options.disabled || false;
+        that.disabledAdd = options.disabledAdd || false;
+
+        if(!options || !options.hdef || !options.emptyRow || !options.addImgSrc || !options.rmImgSrc) {
+            throw "missing items";
+        }
+        if(!(options.hdef instanceof jQuery)) {
+            if(!options.hdef.title) {
+                throw "missing items";
+            }
+        } else {
+            if(!options.hdef.is("thead")) {
+                throw "jQuery selector wrong element, requires thead";
+            }
+        }
+        this.onAdd = function(toInsert, startup, previousRow) {
+            //console.log("##onAdd: ", toInsert);
+            let add = options.onAdd || function() {};
+            add.call(toInsert, toInsert, startup, previousRow);
+        }
+        this.onRemove = options.onRemove || function(_, callback) {callback();};
+        this.afterRemove = options.afterRemove || function() {};
+        this.subRow = options.subRow || function() {};
+        this.afterInsert = options.afterInsert || function() {};
+        this.addSrc = options.addImgSrc;
+        this.rmSrc = options.rmImgSrc;
+        this.addTitle = options.addImgTitle || "";
+        this.rmTitle = options.rmImgTitle || "";
+        this.tblClass = options.tblClass;
+        const SUBROW_DATA_ID = "__sr";
+        if(typeof(options.emptyRow) === "function") {
+            this._getEmptyRow = options.emptyRow;
+        } else {
+            this._getEmptyRow = function() {
+               return options.emptyRow.clone(true, true)
+            };
+        }
+        this.insert = function(toInsert, after, silent) {
+            let delRow = $("<td></td>");
+            delRow.append("<img src='" + that.rmSrc + "' title='" + that.rmTitle + "' class='plugin_img'>");
+            if (!that.disabled) {
+                delRow.click(function(){that.deleteRow(toInsert);});
+            } else {
+                delRow.addClass("ui-state-disabled");
+            }
+            let addRow = $("<td></td>");
+            addRow.append("<img src='" + that.addSrc + "' title='" + that.addTitle + "' class='plugin_img'>");
+            if (!that.disabled && !that.disabledAdd) {
+                addRow.click(function(){that.insertEmptyRow(toInsert);});
+            } else {
+                addRow.addClass("ui-state-disabled");
+            }
+            //console.log("that.onAdd: ", that.onAdd);
+            toInsert.prepend(addRow);
+            toInsert.append(delRow);
+            if(!silent) {
+                if(that.onAdd.call(toInsert, toInsert, false, after) === false) {
+                    return;
+                }
+            }
+            if(after) {
+                after.after(toInsert);
+            } else {
+                that.elem.append(toInsert);
+            }
+
+            let currentSubRow = that.subRow.call(toInsert, toInsert);
+            if(currentSubRow) {
+                let completeTr = $("<tr>").append($("<td></td>").css("border", "none"))
+                    .append($("<td colspan=99'></td>").css("border", "none").append(currentSubRow));
+                toInsert.after(completeTr);
+                toInsert.data(SUBROW_DATA_ID, completeTr);
+            }
+
+            that.afterInsert(toInsert);
+        }
+
+        this.insertEmptyRow = function(row) {
+            let crow = row;
+            if(row && row.data(SUBROW_DATA_ID)) {
+                crow = row.data(SUBROW_DATA_ID);
+            }
+            that.insert(that._getEmptyRow(), crow);
+        }
+        this.deleteRow = function(row) {
+            that.onRemove.call(row, row, function() {
+                if(row.data(SUBROW_DATA_ID)) {
+                    row.data(SUBROW_DATA_ID).remove();
+                }
+                row.remove();
+                that.afterRemove.call(row, row)
+                if(!that.elem.find("tr").length) {
+                    that.insertEmptyRow();
+                }
+            });
+        }
+        let table = $("<table></table>");
+        if(that.tblClass) {
+            table.addClass(that.tblClass)
+        }
+
+        if(!(options.hdef instanceof jQuery)) {
+            //console.log('options.hdef: ', options.hdef);
+            let thead = $("<thead></thead>");
+            let tr = $("<tr></tr>");
+            tr.append("<th></th>");
+            options.hdef.title.forEach(function(elem, i) {
+                let th = $("<th></th>");
+                th.html(elem);
+                //if(options.hdef.class && options.hdef.class[i]) {
+                //    th.addClass(options.hdef.class[i])
+                //}
+                if(options.hdef.id && options.hdef.id[i]) {
+                    th.attr("id", options.hdef.id[i]);
+                }
+                tr.append(th);
+            });
+            tr.append("<th></th>");
+            thead.append(tr);
+            table.append(thead);
+        } else {
+            let thead = options.hdef;
+            let numTr = thead.find("tr").length || 1;
+            thead.find("tr").eq(0).prepend("<th rowspan='" + numTr + "'></th>").append("<th rowspan='" + numTr + "'></th>");
+            table.append(thead);
+        }
+        let tdata = $("<tbody></tbody>");
+        this.elem = tdata;
+        table.append(tdata);
+        jsel.append(table);
+        if(options.initialRows && options.initialRows.length) {
+            options.initialRows.forEach(function(row) {
+                that.insert(row, undefined, true);
+                that.onAdd.call(row, row, true);
+            });
+        } else {
+            this.insertEmptyRow();
+        }
+    }
+
+    $.fn.autotable = function(data) {
+        if(!this.data("autotable")) {
+            this.data("autotable", new __vartab(this, data));
+        }
+        return this.data("autotable");
+    };
+}(jQuery));
+
