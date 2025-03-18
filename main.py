@@ -1,9 +1,9 @@
 from flask import Flask, jsonify, render_template, request, Response
 
 from RequestUtils import Employee
-from dbdata import create_database, populate_employee_table, populate_files, link_employee_to_file, \
+from employee_db import create_database, populate_employee_table, populate_files, link_employee_to_file, \
     check_database_exists
-from handledbdata import find_image_file, get_employee_data, get_companies, get_company_departments, delete_employee, \
+from employee_module import find_image_file, get_employee_data, get_companies, get_company_departments, delete_employee, \
     save_employee
 
 import time
@@ -23,8 +23,6 @@ def save_employee_data():
     except TypeError as e:
         print(f"Invalid employee data: {e}")
         return Response("Invalid employee data", status=400)
-
-    time.sleep(1)
 
     feedback, status = save_employee(emp)
     return jsonify({

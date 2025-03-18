@@ -1,8 +1,7 @@
-import sqlite3
 
 from RequestUtils import Employee, Feedback, SaveResult
+from employee_db import db_name
 
-db_name = 'autotable_plugin.db'
 
 def get_employee_data():
     # Connect to SQLite database
