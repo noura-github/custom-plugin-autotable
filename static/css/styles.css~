@@ -66,5 +66,5 @@
 }
 
 .img_desc {
-   resize: none;
+  resize: none;
 }

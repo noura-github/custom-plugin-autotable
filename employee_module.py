@@ -154,7 +154,7 @@ def get_companies():
     return companies
 
 
-def get_company_departments(companyId):
+def get_company_departments(comp_id):
     # Connect to SQLite database
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
@@ -163,7 +163,7 @@ def get_company_departments(companyId):
     cursor.execute('''
         SELECT id, name FROM department
         WHERE company_id = ?
-    ''', (companyId,))
+    ''', (comp_id,))
 
     rows = cursor.fetchall()
 
@@ -319,4 +319,66 @@ def delete_employee(emp_id):
         return Feedback(False, f"Unexpected error: {e}")
 
 
+import sqlite3
+from werkzeug.utils import secure_filename
+
+import sqlite3
+from werkzeug.utils import secure_filename
+from flask import Response, jsonify
+
+def save_or_update_file_and_link_employee(employee_id, file, filename, description, file_id=0):
+    try:
+        # Connect to SQLite database
+        conn = sqlite3.connect(db_name)
+        cursor = conn.cursor()
+
+        if file_id == 0:
+            # If no file_id is provided (or file_id is 0), insert a new file
+            file_data = file.read()
+
+            # Insert the new file into the 'files' table
+            cursor.execute('''
+                INSERT INTO files (filename, description, file)
+                VALUES (?, ?, ?)
+            ''', (filename, description, file_data))
+
+            # Get the file_id of the inserted file
+            file_id = cursor.lastrowid
+
+            print(f"New file '{filename}' inserted into database with file_id {file_id}.")
+        else:
+            # If file_id is provided (i.e., file already exists), update the existing file
+            file_data = file.read()
+
+            # Update the existing file in the 'files' table
+            cursor.execute('''
+                UPDATE files
+                SET filename = ?, description = ?, file = ?
+                WHERE id = ?
+            ''', (filename, description, file_data, file_id))
+
+            print(f"Existing file with file_id {file_id} updated in the database.")
+
+        # Link the file to the employee by updating the employee's file_id
+        cursor.execute('''
+            UPDATE employee SET file_id = ? WHERE id = ?
+        ''', (file_id, employee_id))
+
+        print(f"File with file_id {file_id} linked to employee with ID {employee_id}.")
+
+        # Commit changes and close the connection
+        conn.commit()
+        conn.close()
+
+        return file_id  # Optionally, return the file_id for further use
+
+    except sqlite3.DatabaseError as e:
+        # Handle database errors
+        print(f"Database error: {e}")
+        return Response(f"Database error: {e}", status=500)
+
+    except Exception as e:
+        # Handle other unexpected errors
+        print(f"Unexpected error: {e}")
+        return Response(f"Unexpected error: {e}", status=500)
 

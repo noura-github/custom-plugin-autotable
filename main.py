@@ -1,14 +1,50 @@
 from flask import Flask, jsonify, render_template, request, Response
+from werkzeug.utils import secure_filename
 
 from RequestUtils import Employee
 from employee_db import create_database, populate_employee_table, populate_files, link_employee_to_file, \
     check_database_exists
 from employee_module import find_image_file, get_employee_data, get_companies, get_company_departments, delete_employee, \
-    save_employee
+    save_employee, save_or_update_file_and_link_employee
 
-import time
 
 app = Flask(__name__)
+
+
+@app.route('/save_imagedata', methods=['POST'])
+def save_image_data():
+    try:
+        # Check if a file is in the request
+        if 'file' not in request.files:
+            return Response("No file part", status=400)
+
+        file = request.files['file']  # Retrieve the file from the request
+        if file.filename == '':
+            return Response("No selected file", status=400)
+
+        # Retrieve the rest of the data from the form
+        employee_id = request.form.get('id')
+        file_id = request.form.get('file_id', 0)  # Default to 0 if not provided
+        filename = request.form.get('filename')
+        description = request.form.get('description')
+
+        if not employee_id or not filename:
+            return Response("Missing data in request", status=400)
+
+        # Secure the filename to prevent directory traversal attacks
+        secure_file_name = secure_filename(file.filename)
+
+        # Save or update the file in the database and link it to the employee
+        file_id = save_or_update_file_and_link_employee(employee_id, file, secure_file_name, description, file_id)
+
+        return jsonify({
+            "message": "File saved/updated and linked to employee successfully",
+            "file_id": file_id
+        }), 200
+
+    except Exception as e:
+        print(f"Unexpected error in route: {e}")
+        return Response(f"Unexpected error: {e}", status=500)
 
 
 # Route to create or update employee
@@ -37,7 +73,7 @@ def save_employee_data():
 def remove_employee():
     data = request.get_json()
     if not data or "id" not in data:
-        return Response("Missing 'id' in request body", status=400)
+        return Response("Missing employee id in request body", status=400)
 
 
     feedback = delete_employee(data.get('id'))
@@ -69,12 +105,12 @@ def get_companies_data():
 def get_departments():
     data = request.get_json()
     if not data or "id" not in data:
-        return Response("Missing 'id' in request body", status=400)
+        return Response("Missing company id in request body", status=400)
 
-    companyId = data.get('id')
+    cp_id = data.get('id')
 
     # Dummy return for now
-    return jsonify(get_company_departments(companyId))
+    return jsonify(get_company_departments(cp_id))
 
 
 @app.route('/imagedata', methods=['POST'])
@@ -83,7 +119,7 @@ def get_image_data():
     data = request.get_json()
 
     if not data or 'id' not in data:
-        return Response("Missing 'id' in request body", status=400)
+        return Response("Missing file id in request body", status=400)
 
     file_id = data.get('id')
 

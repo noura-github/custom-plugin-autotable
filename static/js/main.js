@@ -3,6 +3,9 @@ $(document).ready(function () {
     getCompanyData();
 });
 
+var imageCache = {};
+var folderSrc = "static/images/folder.png";
+
 function getCompanyData() {
 
     $.ajax({
@@ -112,7 +115,9 @@ function initAutoTab(data) {
         onRemove: deleteRow,
         emptyRow: getNewRow,
         initialRows: initialRows,
-        afterInsert: function() {
+        afterInsert: function($row) {
+            loadInfoContent($row);
+
         },
         insertImageSrc: "static/images/add.png",
         removeImageSrc: "static/images/minus.png",
@@ -176,12 +181,16 @@ function saveRowData($row) {
         contentType: 'application/json',
         data: JSON.stringify(employee_data),
         success: function(result) {
-            result.emp_id
             if (result && result.emp_id > 0){
+                $row.data("id", result.emp_id);
                 cells.find(".emp_id").text(result.emp_id);
             }
             $row.find(".emp_wait").hide();
             $row.find(".emp_success").show();
+            if (isDisabledInfoContent($row)){
+                toggleInfoContent($row, false);
+                loadInfoContent($row);
+            }
         },
         error: function(xhr, status, error) {
             let result = JSON.parse(xhr.responseText)
@@ -194,10 +203,12 @@ function saveRowData($row) {
 
 function getNewRow(e) {
     let tab = $("#table_container");
-
     let row = $("<tr></tr>");
     let id = (e && e.id ? e.id : 0);
     id && row.data("id", id);
+    e && e.file_id && row.data("file_id", e.file_id);
+    e && e.filename && row.data("filename", e.filename);
+    e && e.description && row.data("description", e.description);
     td = $("<td><span class='emp_id'>" + id + "</span></td>");row.append(td);
 
     let firstname = (e && e.firstname ? e.firstname : "");
@@ -205,8 +216,8 @@ function getNewRow(e) {
     input_firstname.attr("disabled", (firstname ? true : false));
     input_firstname.on("change", function() {
         let firstname = $(this).val();
-        saveRowData(row);
         //Save the new firstname in DB
+        saveRowData(row);
     })
     td = $("<td></td>");td.append(input_firstname);row.append(td);
 
@@ -267,10 +278,134 @@ function getNewRow(e) {
         saveRowData(row);
     });
 
-    td = $("<td><img src='static/images/info.png' class='plugin_img'></td>");
+    td = $("<td><img src='static/images/info.png' class='plugin_img info_tip'></td>");
     row.append(td);
 
     return row;
+}
+function isDisabledInfoContent($row){
+    return $row.find(".info_tip").attr("disabled");
+}
+
+function toggleInfoContent($row, disabled){
+    $row.find(".info_tip").attr("disabled", disabled);
+}
+
+function loadInfoContent($row){
+
+    let id = $row.data("id");
+    if (!id){
+        toggleInfoContent($row, true);
+        return;
+    }
+    let file_id = $row.data("file_id");
+    if (!file_id){
+        createInfoContent($row, folderSrc);
+        return;
+    }
+
+    $.ajax({
+        type: 'POST',
+        url: "/imagedata",
+        dataType: 'binary',
+        processData: false,
+        contentType: 'application/json',
+        xhrFields: { responseType: 'blob' },
+        data: JSON.stringify({ 'id': file_id }),
+        success: function(blob) {
+            // Create a URL for the blob
+            let imageUrl = blob ? URL.createObjectURL(blob) : folderSrc;
+            // Cache the image
+            if (imageUrl !== folderSrc) {
+                imageCache[id] = imageUrl;
+            }
+            createInfoContent($row, imageUrl)
+        },
+        error: function(xhr, status, error) {
+            console.error("Error: ", xhr);
+        }
+    });
+}
+
+function createInfoContent($row, imageUrl){
+    let id = $row.data("id");
+    let filename = $row.data("filename") ? $row.data("filename") : "";
+    let description = $row.data("description") ? $row.data("description") : "";
+
+    let info_elem = $row.find(".info_tip");
+
+    let content = $("<div class='tooltip-container'></div>");
+
+    let imageContainer = $("<div class='content'></div>");
+    let footerContainer = $("<div class='footer'></div>");
+    let tooltipImg = $("<img class='tooltip_img' src='" + imageUrl + "'>");
+    imageContainer.append(tooltipImg);
+
+    let uploadFile = $("<div class='mb-3'></div>");
+    let uploadFileInput = $("<input data-id='" + id + "' class='form-control' type='file' accept='image/png, image/jpg, image/jpeg'>");
+    uploadFile.append(uploadFileInput);
+
+    let descArea = $("<textarea class='img_desc form-control' rows='3'>" + description + "</textarea>");
+    let infoFootSpan = $("<div></div>");
+    infoFootSpan.append(descArea);
+    footerContainer.append(infoFootSpan);
+
+    content.append(imageContainer);
+    content.append(footerContainer);
+    content.append(uploadFile);
+
+    tippy(".info_tip", {
+        content: "",
+        trigger: 'click',
+        interactive: true,
+        allowHTML: true,
+    });
+
+    let tippy_instance = info_elem[0]._tippy;
+    info_elem[0]._tippy.setContent(content.html());
+
+    $(document).on('change', uploadFileInput, function(e){
+        let target = $(e.target);
+        if (target.data("id") === id && e.target.files){
+            const file = e.target.files[0];
+            if (file) {
+                saveInfoImage($row, file, descArea.val());
+            }
+        }
+    });
+
+}
+
+function saveInfoImage($row, file, description){
+
+    let file_id = $row.data("file_id") ? $row.data("file_id") : 0;
+    let id = $row.data("id");
+    console.log(file_id);
+
+    const formData = new FormData();
+    formData.append('id', file_id);
+    formData.append('file_id', file_id);
+    formData.append('file', file);
+    formData.append('filename', file.name);
+    formData.append('description', description);
+
+    $.ajax({
+        type: 'POST',
+        url: "/save_imagedata",
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: 'json',
+        success: function(response) {
+            $row.find(".tooltip_img").attr("src", URL.createObjectURL(file));
+        },
+        error: function(xhr, status, error) {
+            console.error("Error: ", xhr);
+        }
+    });
+
+
+
 }
 
 
