@@ -1,14 +1,12 @@
 import os
 import sqlite3
 import pytest
-from employee_db import (
+from app.employee_db import (
     check_database_exists,
     create_database,
     insert_file,
-    populate_files,
     populate_employee_table,
-    link_employee_to_file,
-    db_name
+    link_employee_to_file
 )
 
 # Override db_name for test isolation

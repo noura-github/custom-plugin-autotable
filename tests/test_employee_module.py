@@ -1,9 +1,8 @@
 import os
-import time
 
 import pytest
-from employee_db import create_database, populate_employee_table
-from employee_module import (
+from app.employee_db import create_database, populate_employee_table
+from app.employee_module import (
     get_employee_data,
     find_image_file,
     get_companies,
@@ -12,7 +11,7 @@ from employee_module import (
     save_employee,
     delete_employee
 )
-from RequestUtils import Employee, SaveResult, Feedback
+from app.RequestUtils import Employee, Feedback
 
 
 TEST_DB = 'test_autotable.db'

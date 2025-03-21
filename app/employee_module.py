@@ -1,6 +1,5 @@
-
-from RequestUtils import Employee, Feedback, SaveResult
-from employee_db import db_name
+from app.RequestUtils import SaveResult, Feedback, Employee
+from app.employee_db import db_name
 
 
 def get_employee_data():
@@ -180,7 +179,7 @@ def get_company_departments(comp_id):
 
 
 import re
-import sqlite3
+
 
 def validate_employee_data(emp):
     if not isinstance(emp, Employee):

@@ -1,4 +1,4 @@
-name: Flask CI/CD - Test & Build Executable
+name: Flask CI/CD - Test, Build Executable, Containerize with NGINX
 
 on:
   push:
@@ -28,7 +28,7 @@ jobs:
     - name: Run tests
       run: pytest
 
-  build:
+  build-executable:
     needs: test
     runs-on: ubuntu-latest
 
@@ -56,3 +56,36 @@ jobs:
       with:
         name: flask-executable
         path: dist/custom_plugin_autotable
+
+  dockerize:
+    needs: build-executable
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GitHub Container Registry (optional)
+      if: false  # Set to `true` if you want to push to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build Docker image
+      run: |
+        docker build -t flask-nginx-app .
+
+    - name: Save Docker image as artifact
+      run: |
+        docker save flask-nginx-app | gzip > flask-nginx-app.tar.gz
+
+    - name: Upload Docker image
+      uses: actions/upload-artifact@v4
+      with:
+        name: flask-nginx-image
+        path: flask-nginx-app.tar.gz

@@ -94,10 +94,11 @@ def insert_file(filename, description, filepath):
     conn.close()
 
 def populate_files():
-    insert_file('Dock.jpg', 'A dock over a lake at night.', 'static/images/Dock.jpg')
-    insert_file('Fields.jpg', 'A road in the fields of flowers leading to the mountains.', 'static/images/Fields.jpg')
-    insert_file('Waterfall.jpg', 'A Cascading Waterfall under pink trees.', 'static/images/Waterfall.jpg')
-    insert_file('Lake.jpg', 'A blue water lake.', 'static/images/Lake.jpg')
+    insert_file('Dock.jpg', 'A dock over a lake at night.', '../static/images/Dock.jpg')
+    insert_file('Fields.jpg', 'A road in the fields of flowers leading to the mountains.',
+                '../static/images/Fields.jpg')
+    insert_file('Waterfall.jpg', 'A Cascading Waterfall under pink trees.', '../static/images/Waterfall.jpg')
+    insert_file('Lake.jpg', 'A blue water lake.', '../static/images/Lake.jpg')
 
 # Function to populate the employee table (with companies and departments)
 def populate_employee_table():

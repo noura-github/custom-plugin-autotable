@@ -1,12 +1,11 @@
 from flask import Flask, jsonify, render_template, request, Response
 from werkzeug.utils import secure_filename
 
-from RequestUtils import Employee
-from employee_db import create_database, populate_employee_table, populate_files, link_employee_to_file, \
-    check_database_exists
-from employee_module import find_image_file, get_employee_data, get_companies, get_company_departments, delete_employee, \
-    save_employee, save_or_update_file_and_link_employee
-
+from app.RequestUtils import Employee
+from app.employee_db import check_database_exists, link_employee_to_file, populate_employee_table, create_database, \
+    populate_files
+from app.employee_module import save_or_update_file_and_link_employee, save_employee, delete_employee, \
+    get_employee_data, get_companies, get_company_departments, find_image_file
 
 app = Flask(__name__)
 
