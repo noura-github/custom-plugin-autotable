@@ -18,8 +18,8 @@ TEST_DB = 'test_autotable.db'
 
 @pytest.fixture(autouse=True)
 def setup_and_teardown(monkeypatch):
-    monkeypatch.setattr('app.employee_db.db_name', TEST_DB)
-    monkeypatch.setattr('app.employee_module.db_name', TEST_DB)
+    monkeypatch.setattr('employee_db.db_name', TEST_DB)
+    monkeypatch.setattr('employee_module.db_name', TEST_DB)
 
     if os.path.exists(TEST_DB):
         os.remove(TEST_DB)

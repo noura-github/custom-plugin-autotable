@@ -16,7 +16,7 @@ TEST_DB = 'test_autotable_plugin.db'
 @pytest.fixture(autouse=True)
 def setup_and_teardown(monkeypatch):
     # Redirect to a test DB
-    monkeypatch.setattr('app.employee_db.db_name', TEST_DB)
+    monkeypatch.setattr('employee_db.db_name', TEST_DB)
     # Cleanup before and after each test
     if os.path.exists(TEST_DB):
         os.remove(TEST_DB)
